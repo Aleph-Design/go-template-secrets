@@ -1,0 +1,55 @@
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"html/template"
+)
+
+
+
+func main() {
+	dir, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Can't get working dir. ", err)
+		log.Fatal(err)
+	}
+	fmt.Println("Working directory: ", dir)
+
+
+	// create & start a web server that will render the template
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+
+		// parse a template in the current directory
+		goT, err := template.ParseFiles(dir + "/templates/layout.tmpl",
+																		dir + "/templates/sidebar.tmpl",
+																		dir + "/templates/pages/home.tmpl")
+		if err != nil {
+			log.Fatal("can't parse files. ", err)
+		}
+
+		err = goT.Execute(w, nil)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	fmt.Println("Serving...")
+	http.ListenAndServe(":8080", nil)
+}
+
+/*
+And that's how you implement sub templates.
+Please mind that the order you pass the template files into the 
+template.ParseFiles method matters. 
+The first passed file should be your base template.
+
+In the example above only the home template will be loaded as the 
+main template.
+
+To support multiple pages we have to create multiple template instances 
+- one for each page.
+The instances will be saved in a map, indexed by the page name
+*/

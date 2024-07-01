@@ -1,0 +1,99 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+	"html/template"
+	"log"
+	"net/http"
+	"os"
+)
+
+func main() {
+	dir, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Can't get working dir. ", err)
+		log.Fatal(err)
+	}
+	fmt.Println("Working directory: ", dir)
+
+	pages := []string{"home", "about"}
+	tpls := make(map[string]*template.Template)
+
+	funcMap := template.FuncMap{
+		"dict": func(values ...interface{}) (map[string]interface{}, error) {
+			if len(values)%2 != 0 {
+				return nil, errors.New("invalid dict call")
+			}
+			dict := make(map[string]interface{}, len(values)/2)
+			for i := 0; i < len(values); i += 2 {
+				key, ok := values[i].(string)
+				if !ok {
+					return nil, errors.New("dict keys must be strings")
+				}
+				dict[key] = values[i+1]
+			}
+			return dict, nil
+		},
+	}
+
+	for _, page := range pages {
+		// parse the template file in the current working directory
+		goT := template.New("layout.tmpl").Funcs(funcMap)
+		goT, err = goT.ParseFiles(dir+"/templates/layout.tmpl",
+			dir+"/templates/sidebar.tmpl",
+			dir+"/templates/pages/"+page+".tmpl",
+			dir+"/templates/headline.tmpl")
+		if err != nil {
+			log.Fatal("error parsing files: ", err)
+		}
+		tpls[page] = goT
+	}
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		err := tpls["home"].Execute(w, map[string]interface{}{"name": "Jan"})
+		if err != nil {
+			log.Fatal("can't execute template. ", err)
+		}
+	})
+
+	http.HandleFunc("/about", func(w http.ResponseWriter, r *http.Request) {
+		err := tpls["about"].Execute(w, nil)
+		if err != nil {
+			log.Fatal("can't execute template. ", err)
+		}
+	})
+
+	// create & start a web server that will render the template
+	fmt.Println("Serving...")
+	http.ListenAndServe(":8080", nil)
+}
+
+/*
+Let's assume we want to implement a re-usable headline component.
+Both of our pages, home and about should make use of this component.
+But there's a catch:
+The home page should show the headline in black color, while the
+about page should display it in blue.
+Also, of course, the text of the headline should correspond to the current page.
+
+The first part is a bit tricky:
+We have to implement a template helper function which can be used to pass
+variable data from template to template.
+The helper function will have the name 'dict' and it accepts a map object
+with key type string and any value type.
+The dict function will first check if the number of passed arguments is
+dividable by 2. If not, it will break.
+Then, it will create a new map where each key is mapped to it's value.
+This might seem a bit strange at the beginning, but it will simply passing
+data in sub templates. You'll see...
+
+Unfortunately it's not possible to pass helper functions to the ParseFiles method.
+In theory, we could add these helper functions after parsing to the created template instance. 
+But this would be too late. The functions have to be registered before parsing.
+That's why we had to create a template instance first (template.New("layout.tmpl"))
+(with the name of our base template file layout.tmpl), 
+then add the helper function, then parse the template files.
+
+
+*/

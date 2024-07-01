@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Go Template Example</title>
+</head>
+<body>
+  <aside>
+    {{ block "sidebar" . }}
+    {{ end }}
+  </aside>
+  <main>
+    {{ block "main" . }}
+    {{ end }}
+  </main>
+</body>
+</html>
+
+<!--
+As you can see the file contains a simple HTML document structure. 
+The template code of the sidebar is not included into that file. 
+Instead, a template block with the name sidebar has to be loaded.
+If you would run the code above to render that file without any changes you will 
+get a runtime error after you load the page in your web browser:
+html/template:layout.tmpl:8:20: no such template "sidebar" 
+Please mind: You will NOT get a compilation error.
+Neither you will get an error right after the program has started.
+Go find out that a template is missing after you try to execute 
+the parsed template instance.
+-->
